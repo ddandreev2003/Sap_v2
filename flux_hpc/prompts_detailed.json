@@ -1,0 +1,52 @@
+{
+  "cyberpunk_neon_city": {
+    "text": "Neon-lit cyberpunk city at night with flying cars and holographic billboards",
+    "hints": [
+      "vibrant purple and cyan neon colors, dark atmosphere",
+      "detailed futuristic architecture, glass and steel structures",
+      "rain-soaked streets, reflections on wet surfaces",
+      "crowded streets with neon signs everywhere",
+      "wide cinematic perspective, sci-fi noir aesthetic"
+    ]
+  },
+  "enchanted_forest": {
+    "text": "Magical enchanted forest with glowing trees and mystical creatures",
+    "hints": [
+      "bioluminescent plants, soft glowing colors, ethereal atmosphere",
+      "intricate forest details, moss-covered ancient trees",
+      "mystical fog and light rays through canopy",
+      "fantasy storybook illustration style",
+      "dense woodland landscape, dark mysterious tones"
+    ]
+  },
+  "underwater_palace": {
+    "text": "Stunning underwater coral palace with exotic sea creatures swimming around",
+    "hints": [
+      "vibrant coral colors, bioluminescent details, dreamy water effects",
+      "architectural details, columns and arches made of coral",
+      "sunlight filtering through water, rays of light",
+      "realistic oceanic environment, detailed marine life",
+      "fantasy underwater kingdom aesthetic"
+    ]
+  },
+  "steampunk_airship": {
+    "text": "Massive steampunk airship with visible gears and steam engines floating in clouds",
+    "hints": [
+      "brass and copper materials, intricate mechanical details",
+      "industrial Victorian aesthetic, clockwork precision",
+      "dramatic sky setting, clouds and storm atmosphere",
+      "technical blueprint style with mechanical parts exposed",
+      "golden hour lighting, romantic steampunk vision"
+    ]
+  },
+  "serene_japanese_garden": {
+    "text": "Traditional Japanese garden with stone lanterns, bamboo, and a koi pond",
+    "hints": [
+      "zen minimalist style, carefully balanced composition",
+      "autumn colors, fallen leaves and seasonal beauty",
+      "traditional architecture, wooden bridge details",
+      "peaceful morning mist, soft natural lighting",
+      "high detail, realistic landscape photography"
+    ]
+  }
+}

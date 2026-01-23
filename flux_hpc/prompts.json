@@ -1,0 +1,32 @@
+{
+  "prompt_1": {
+    "text": "A serene landscape with mountains at sunset, golden hour lighting",
+    "hints": [
+      "soft warm colors, peaceful atmosphere",
+      "dramatic clouds, cinematic composition",
+      "detailed natural elements, realistic style",
+      "vibrant colors, artistic impression",
+      "minimalist approach, clean composition"
+    ]
+  },
+  "prompt_2": {
+    "text": "A futuristic cityscape with flying cars and neon lights",
+    "hints": [
+      "cyberpunk aesthetic, vibrant neon colors",
+      "detailed architecture, sci-fi style",
+      "crowded streets, dynamic composition",
+      "night scene, atmospheric lighting",
+      "high contrast, dramatic perspective"
+    ]
+  },
+  "prompt_3": {
+    "text": "A cozy coffee shop interior with warm lighting and customers",
+    "hints": [
+      "warm ambient lighting, inviting atmosphere",
+      "detailed interior design, comfortable furniture",
+      "busy atmosphere, people interaction",
+      "minimalist design, modern aesthetic",
+      "vintage style, nostalgic feeling"
+    ]
+  }
+}
