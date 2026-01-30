@@ -147,9 +147,9 @@ def generate_with_custom_sap(
                 # Пытаемся загрузить SAP Pipeline
                 pipeline = SapFlux.from_pretrained(
                     "black-forest-labs/FLUX.1-dev",
-                    torch_dtype=torch.bfloat16,
-                    device_map="auto"
+                    torch_dtype=torch.bfloat16
                 )
+                pipeline = pipeline.to("cuda")
                 print(f"✅ SAP FLUX модель загружена успешно")
                 use_sap = True
             else:
