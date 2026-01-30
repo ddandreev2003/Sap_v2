@@ -117,12 +117,20 @@ def generate_with_custom_sap(
     print(f"  Seeds: {seeds}")
     
     # Импортируем необходимые модули
+    SapFluxPipeline = None
     try:
+        import sys
+        from pathlib import Path as PathLib
+        # Добавляем текущую директорию в sys.path если её ещё нет
+        current_dir = str(PathLib.cwd())
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
+        
         from SAP_pipeline_flux import SapFluxPipeline
-        print(f"✅ SAP Pipeline загружена")
-    except ImportError:
-        print(f"❌ Ошибка: не удалось импортировать SAP_pipeline_flux")
-        return None
+        print(f"✅ SAP Pipeline загружена успешно")
+    except ImportError as import_err:
+        print(f"⚠️  SAP Pipeline недоступна: {import_err}")
+        print(f"   Будет использован Direct FLUX режим")
     
     try:
         # Загружаем модель FLUX
@@ -132,18 +140,39 @@ def generate_with_custom_sap(
         output_dir = Path(f"results_custom_sap/{datetime.now().strftime('%Y%m%d_%H%M%S')}/{name}")
         output_dir.mkdir(parents=True, exist_ok=True)
         
-        # Инициализируем SAP pipeline
+        # Инициализируем pipeline
+        pipeline = None
         try:
-            pipeline = SapFluxPipeline.from_pretrained(
-                "black-forest-labs/FLUX.1-dev",
-                torch_dtype=torch.bfloat16,
-                device_map="auto"
-            )
-            print(f"✅ FLUX модель загружена")
-        except Exception as e:
-            print(f"❌ Ошибка при загрузке FLUX: {e}")
-            print(f"   Проверьте что модель доступна и есть место на диске")
-            return None
+            if SapFluxPipeline is not None:
+                # Пытаемся загрузить SAP Pipeline
+                pipeline = SapFluxPipeline.from_pretrained(
+                    "black-forest-labs/FLUX.1-dev",
+                    torch_dtype=torch.bfloat16,
+                    device_map="auto"
+                )
+                print(f"✅ SAP FLUX модель загружена успешно")
+                use_sap = True
+            else:
+                raise Exception("SapFluxPipeline not available")
+                
+        except Exception as pipeline_err:
+            print(f"⚠️  SAP Pipeline не смог загрузиться: {pipeline_err}")
+            print(f"   Переходим на обычный FLUX...")
+            
+            try:
+                from diffusers import FluxPipeline
+                pipeline = FluxPipeline.from_pretrained(
+                    "black-forest-labs/FLUX.1-dev",
+                    torch_dtype=torch.bfloat16
+                )
+                # Оптимизируем для VRAM
+                pipeline.enable_attention_slicing()
+                print(f"✅ FLUX модель загружена (Direct режим)")
+                use_sap = False
+            except Exception as flux_err:
+                print(f"❌ Ошибка при загрузке FLUX: {flux_err}")
+                print(f"   Проверьте что модель доступна и есть место на диске")
+                return None
         
         # Генерируем изображения для каждого seed
         results = []
@@ -156,19 +185,31 @@ def generate_with_custom_sap(
                 generator = torch.Generator(device=device)
                 generator.manual_seed(seed)
                 
-                # Запускаем SAP генерирование
-                output = pipeline(
-                    height=height,
-                    width=width,
-                    num_inference_steps=num_inference_steps,
-                    guidance_scale=guidance_scale,
-                    generator=generator,
-                    sap_prompts={
-                        "explanation": f"SAP decomposition for: {sap_data['original_prompt']}",
-                        "prompts_list": sap_data["prompts_list"],
-                        "switch_prompts_steps": sap_data["switch_prompts_steps"]
-                    }
-                )
+                # Запускаем генерирование
+                if use_sap:
+                    # SAP режим с деком позицией
+                    output = pipeline(
+                        height=height,
+                        width=width,
+                        num_inference_steps=num_inference_steps,
+                        guidance_scale=guidance_scale,
+                        generator=generator,
+                        sap_prompts={
+                            "explanation": f"SAP decomposition for: {sap_data['original_prompt']}",
+                            "prompts_list": sap_data["prompts_list"],
+                            "switch_prompts_steps": sap_data["switch_prompts_steps"]
+                        }
+                    )
+                else:
+                    # Direct режим - используем оригинальный промт
+                    output = pipeline(
+                        prompt=sap_data["original_prompt"],
+                        height=height,
+                        width=width,
+                        num_inference_steps=num_inference_steps,
+                        guidance_scale=guidance_scale,
+                        generator=generator
+                    )
                 
                 # Сохраняем результат
                 image = output.images[0]

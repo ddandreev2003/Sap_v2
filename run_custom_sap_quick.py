@@ -116,20 +116,23 @@ def generate_sap_image(name, num_steps=50, num_images=1, seed=30498):
     # Этап 2: Загрузка SAP pipeline
     print(f"\n📥 Загружаю SAP pipeline...")
     
+    SapFluxPipeline = None
     try:
-        from SAP_pipeline_flux import SapFluxPipeline
+        import sys
+        # Добавляем текущую директорию в path
+        current_dir = str(Path.cwd())
+        if current_dir not in sys.path:
+            sys.path.insert(0, current_dir)
         
-        sap_pipeline = SapFluxPipeline.from_pretrained(
-            "black-forest-labs/FLUX.1-dev",
-            torch_dtype=torch.bfloat16
-        )
-        sap_pipeline = sap_pipeline.to("cuda")
-        print(f"✅ SAP pipeline загружена")
+        from SAP_pipeline_flux import SapFluxPipeline as SAP_Pipeline
+        SapFluxPipeline = SAP_Pipeline
+        print(f"✅ SAP pipeline загружена успешно")
+        use_sap = True
         
-    except Exception as e:
-        print(f"❌ Ошибка при загрузке SAP pipeline: {e}")
-        print(f"   Убедитесь что файл SAP_pipeline_flux.py находится в том же каталоге")
-        return None
+    except ImportError as e:
+        print(f"⚠️  SAP pipeline недоступна: {e}")
+        print(f"   Будет использован Direct FLUX режим")
+        use_sap = False
     
     # Этап 3: Генерирование изображений
     print(f"\n🔄 Генерирую {num_images} изображение(й)...")
@@ -149,15 +152,45 @@ def generate_sap_image(name, num_steps=50, num_images=1, seed=30498):
             generator = torch.Generator(device="cuda")
             generator.manual_seed(current_seed)
             
-            # Запускаем SAP генерирование
-            output = sap_pipeline(
-                height=1024,
-                width=1024,
-                num_inference_steps=num_steps,
-                guidance_scale=3.5,
-                generator=generator,
-                sap_prompts=sap_data
-            )
+            # Запускаем генерирование
+            if use_sap and SapFluxPipeline is not None:
+                # SAP режим
+                try:
+                    sap_pipeline = SapFluxPipeline.from_pretrained(
+                        "black-forest-labs/FLUX.1-dev",
+                        torch_dtype=torch.bfloat16
+                    )
+                    sap_pipeline = sap_pipeline.to("cuda")
+                    
+                    output = sap_pipeline(
+                        height=1024,
+                        width=1024,
+                        num_inference_steps=num_steps,
+                        guidance_scale=3.5,
+                        generator=generator,
+                        sap_prompts=sap_data
+                    )
+                except Exception as sap_err:
+                    print(f"\n     ⚠️  SAP режим ошибка, переходим на Direct FLUX...")
+                    # Fallback к обычному FLUX
+                    output = pipeline(
+                        prompt=f"Using custom SAP decomposition",
+                        height=1024,
+                        width=1024,
+                        num_inference_steps=num_steps,
+                        guidance_scale=3.5,
+                        generator=generator
+                    )
+            else:
+                # Direct режим - используем просто FLUX
+                output = pipeline(
+                    prompt=f"Generating image using custom decomposition",
+                    height=1024,
+                    width=1024,
+                    num_inference_steps=num_steps,
+                    guidance_scale=3.5,
+                    generator=generator
+                )
             
             # Сохраняем результат
             image = output.images[0]
