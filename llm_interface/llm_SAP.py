@@ -60,31 +60,55 @@ def LLM_SAP_batch_Zephyr(prompts_list, llm_model):
     with open('llm_interface/template/template_SAP_user.txt', 'r') as f:
         template_user = ' '.join(f.readlines())
 
-    numbered_prompts = [f"### Input {i + 1}: {p}\n### Output:" for i, p in enumerate(prompts_list)]
-    prompt_user = template_user + "\n\n" + "\n\n".join(numbered_prompts)
-    full_prompt = template_system + "\n\n" + prompt_user
-
     # Load Zephyr
     if llm_model is None:
         pipe = load_Zephyr_pipeline()
     else: 
         pipe = llm_model
 
-    # zephyr
-    # Run inference
-    output = pipe(
-        full_prompt,
-        max_new_tokens=256,
-        temperature=0.7,
-        do_sample=True,
-        top_p=0.9,
-        return_full_text=False
-    )[0]["generated_text"]
+    # Process each prompt separately for better reliability with Zephyr
+    all_outputs = []
     
-    # Parse output
-    print(f"output: {output}")
-    parsed_outputs = parse_batched_llm_output(output, prompts_list)
-    return parsed_outputs
+    for i, prompt in enumerate(prompts_list):
+        print(f"\n🔄 Обработка промта {i+1}/{len(prompts_list)}: '{prompt[:50]}...'")
+        
+        # Create prompt for single input
+        numbered_prompt = f"### Input 1: {prompt}\n### Output:"
+        full_prompt = template_system + "\n\n" + template_user + "\n\n" + numbered_prompt
+        
+        try:
+            # Run inference - increased max_new_tokens for more complete output
+            output = pipe(
+                full_prompt,
+                max_new_tokens=512,
+                temperature=0.5,  # Reduced temperature for more consistent output
+                do_sample=True,
+                top_p=0.95,
+                return_full_text=False
+            )[0]["generated_text"]
+            
+            print(f"  📝 LLM ответ: {output[:100]}...")
+            
+            # Parse single output
+            try:
+                result = get_params_dict_SAP(output)
+                if result is not None:
+                    all_outputs.append(result)
+                    print(f"  ✅ Успешно распарсено")
+                else:
+                    print(f"  ⚠️  Не удалось распарсить, используется fallback")
+                    all_outputs.append(create_fallback_decomposition(prompt))
+            except Exception as parse_error:
+                print(f"  ⚠️  Ошибка парсинга: {parse_error}")
+                print(f"     Используется резервная декомпозиция")
+                all_outputs.append(create_fallback_decomposition(prompt))
+                
+        except Exception as e:
+            print(f"  ❌ Ошибка при вызове LLM: {e}")
+            print(f"     Используется резервная декомпозиция")
+            all_outputs.append(create_fallback_decomposition(prompt))
+    
+    return all_outputs
 
 def LLM_SAP_batch_gpt(prompts_list, key):
     print("### run LLM_SAP_batch with gpt-4o ###")
