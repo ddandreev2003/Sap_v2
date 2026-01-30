@@ -189,6 +189,10 @@ class SAPFluxGenerator:
         if len(sap_prompts_list) != len(prompts):
             print(f"⚠️  Ожидалось {len(prompts)} результатов, получено {len(sap_prompts_list)}")
         
+        # Подсчет успешных декомпозиций
+        successful_decompositions = sum(1 for x in sap_prompts_list if x is not None)
+        print(f"✅ Успешно декомпозировано промтов: {successful_decompositions}/{len(prompts)}")
+        
         # Генерация для каждого оригинального промта
         for i, original_prompt in enumerate(prompts):
             print(f"\n🎨 Генерация SAP для: '{original_prompt}'")
@@ -196,6 +200,8 @@ class SAPFluxGenerator:
             # Проверка корректности SAP результата
             if i >= len(sap_prompts_list) or sap_prompts_list[i] is None:
                 print(f"⚠️  Не удалось получить SAP декомпозицию для промта {i+1}")
+                print(f"    💡 Совет: убедитесь, что LLM ответил в правильном формате")
+                print(f"    💡 Совет: попробуйте использовать GPT вместо Zephyr")
                 continue
             
             sap_prompt_data = sap_prompts_list[i]
@@ -320,6 +326,13 @@ def parse_arguments():
         help='Устройство для генерации'
     )
     
+    parser.add_argument(
+        '--use-pregenerated-sap',
+        type=str,
+        default=None,
+        help='Использовать предгенерированные SAP промты из JSON файла (например: SAP_prompts.json)'
+    )
+    
     return parser.parse_args()
 
 def main():
@@ -396,15 +409,88 @@ def main():
         
         try:
             sap_generator = SAPFluxGenerator(llm=args.llm, device=args.device)
-            sap_results, sap_metadata = sap_generator.generate(
-                prompts=prompts,
-                height=args.height,
-                width=args.width,
-                num_inference_steps=args.num_inference_steps,
-                guidance_scale=args.guidance_scale,
-                seeds=args.seeds,
-                num_images_per_prompt=len(args.seeds)
-            )
+            
+            # Проверяем, нужно ли использовать предгенерированные SAP промты
+            sap_prompts_to_use = None
+            if args.use_pregenerated_sap:
+                print(f"\n📂 Загружаю предгенерированные SAP промты из: {args.use_pregenerated_sap}")
+                try:
+                    from sap_prompts_loader import SAPPromptsLoader
+                    loader = SAPPromptsLoader(args.use_pregenerated_sap)
+                    sap_decompositions = loader.get_sap_decompositions_batch(prompts)
+                    
+                    # Проверяем, что все промты найдены
+                    found_count = sum(1 for x in sap_decompositions if x is not None)
+                    if found_count == len(prompts):
+                        sap_prompts_to_use = sap_decompositions
+                        print(f"✅ Все {len(prompts)} SAP декомпозиций успешно загружены!")
+                    else:
+                        print(f"⚠️  Найдено только {found_count}/{len(prompts)} SAP декомпозиций")
+                        print(f"    Остальные будут сгенерированы на лету...")
+                        sap_prompts_to_use = sap_decompositions
+                except ImportError:
+                    print(f"❌ Не удалось импортировать SAPPromptsLoader")
+                except Exception as e:
+                    print(f"❌ Ошибка при загрузке предгенерированных промтов: {e}")
+            
+            # Если SAP промты загружены, используем их напрямую
+            if sap_prompts_to_use:
+                sap_results = {}
+                sap_metadata = {}
+                
+                for i, (original_prompt, sap_prompt_data) in enumerate(zip(prompts, sap_prompts_to_use)):
+                    print(f"\n🎨 Генерация SAP для: '{original_prompt}'")
+                    
+                    # Если SAP данные не загружены, пропускаем
+                    if sap_prompt_data is None:
+                        print(f"⚠️  SAP декомпозиция не найдена для промта {i+1}, пропускаю...")
+                        continue
+                    
+                    # Сохранение метаданных
+                    sap_metadata[original_prompt] = {
+                        "explanation": sap_prompt_data.get("explanation", "Loaded from pregenerated"),
+                        "prompts_count": len(sap_prompt_data.get("prompts_list", [])),
+                        "switch_steps": sap_prompt_data.get("switch_prompts_steps", []),
+                        "source": "pregenerated"
+                    }
+                    
+                    # Создание генераторов
+                    generators = []
+                    for seed in args.seeds:
+                        gen = torch.Generator(device=args.device)
+                        gen.manual_seed(seed)
+                        generators.append(gen)
+                    
+                    try:
+                        # Генерация с SAP
+                        output = sap_generator.pipeline(
+                            height=args.height,
+                            width=args.width,
+                            num_inference_steps=args.num_inference_steps,
+                            guidance_scale=args.guidance_scale,
+                            generator=generators,
+                            num_images_per_prompt=len(generators),
+                            sap_prompts=sap_prompt_data
+                        )
+                        
+                        images = output.images
+                        sap_results[original_prompt] = images
+                        print(f"✅ Сгенерировано {len(images)} изображений (с предгенерированной SAP декомпозицией)")
+                        
+                    except Exception as e:
+                        print(f"❌ Ошибка при SAP генерации: {e}")
+                        sap_results[original_prompt] = []
+            else:
+                # Стандартная генерация SAP (с вызовом LLM)
+                sap_results, sap_metadata = sap_generator.generate(
+                    prompts=prompts,
+                    height=args.height,
+                    width=args.width,
+                    num_inference_steps=args.num_inference_steps,
+                    guidance_scale=args.guidance_scale,
+                    seeds=args.seeds,
+                    num_images_per_prompt=len(args.seeds)
+                )
             
             # Сохранение результатов
             print("\n💾 Сохранение результатов SAP FLUX...")
@@ -421,6 +507,7 @@ def main():
                 "num_inference_steps": args.num_inference_steps,
                 "guidance_scale": args.guidance_scale,
                 "seeds": args.seeds,
+                "used_pregenerated_sap": args.use_pregenerated_sap is not None,
                 "sap_details": str(sap_metadata)
             }
             save_results_metadata(sap_dir, metadata)

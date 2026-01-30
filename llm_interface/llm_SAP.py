@@ -2,6 +2,13 @@ import requests
 import json
 import re
 import ast
+from pathlib import Path
+import sys
+
+# Добавляем путь к parent директории для импорта sap_fallback
+parent_dir = Path(__file__).parent.parent
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
 
 
 def LLM_SAP(prompts_list, llm='GPT', key='', llm_model=None):
@@ -134,15 +141,32 @@ def parse_batched_llm_output(llm_output_text, original_prompts):
     results = []
 
     for i in range(len(original_prompts)):
+        # Check if we have enough outputs
+        if i >= len(outputs):
+            print(f"⚠️  Не удалось парсить промт {i+1}: недостаточно сегментов (ожидается {len(original_prompts)}, получено {len(outputs)})")
+            # Используем fallback для этого промта
+            results.append(create_fallback_decomposition(original_prompts[i]))
+            continue
+            
         out = outputs[i]
         cleaned = out.strip()
-        print(f"original_prompts: {original_prompts}")
+        
+        # Skip empty outputs
+        if not cleaned:
+            print(f"⚠️  Не удалось парсить промт {i+1}: пустой вывод")
+            results.append(create_fallback_decomposition(original_prompts[i]))
+            continue
+            
         try:
             result = get_params_dict_SAP(cleaned)
-            results.append(result)
+            if result is None:
+                # Если парсинг вернул None, используем fallback
+                results.append(create_fallback_decomposition(original_prompts[i]))
+            else:
+                results.append(result)
         except Exception as e:
-            print(f"Failed to parse prompt {i+1}: {e}")
-            results.append(None)
+            print(f"⚠️  Не удалось парсить промт {i+1}: {e}")
+            results.append(create_fallback_decomposition(original_prompts[i]))
     return results
 
 
@@ -150,27 +174,65 @@ def get_params_dict_SAP(response):
     """
     Parses the LLM output from SAP-style few-shot prompts.
     Cleans up Markdown-style code fences and returns a dict.
+    More robust parsing that handles different formats.
     """
     try:
-        # Extract explanation
-        explanation = response.split("a. Explanation:")[1].split("b. Final dictionary:")[0].strip()
-
-        # Extract and clean dictionary string
-        dict_block = response.split("b. Final dictionary:")[1].strip()
+        # Try to extract explanation
+        if "a. Explanation:" in response and "b. Final dictionary:" in response:
+            explanation = response.split("a. Explanation:")[1].split("b. Final dictionary:")[0].strip()
+            dict_block = response.split("b. Final dictionary:")[1].strip()
+        elif "Explanation:" in response and "dictionary:" in response:
+            # More flexible format
+            explanation = response.split("Explanation:")[1].split("dictionary:")[0].strip()
+            dict_block = response.split("dictionary:")[1].strip()
+        else:
+            # If no explanation found, try to extract just the dictionary
+            print(f"Warning: Could not find explanation section in response")
+            explanation = "Not provided"
+            dict_block = response
 
         # Remove ```python and ``` if present
-        # dict_str = re.sub(r"```(?:python)?", "", dict_block).replace("```", "").strip()
         dict_str = re.sub(r"```[^\n]*\n?", "", dict_block).replace("```", "").strip()
+        
+        # Try to find dictionary in the text if direct parsing fails
+        if not dict_str.startswith("{"):
+            # Look for dictionary pattern
+            dict_match = re.search(r"\{.*\}", dict_str, re.DOTALL)
+            if dict_match:
+                dict_str = dict_match.group(0)
+            else:
+                raise ValueError("Could not find dictionary pattern in response")
 
         # Parse dictionary safely
         final_dict = ast.literal_eval(dict_str)
 
         return {
             "explanation": explanation,
-            "prompts_list": final_dict["prompts_list"],
-            "switch_prompts_steps": final_dict["switch_prompts_steps"]
+            "prompts_list": final_dict.get("prompts_list", []),
+            "switch_prompts_steps": final_dict.get("switch_prompts_steps", [])
         }
 
     except Exception as e:
-        print("Parsing failed:", e)
+        print(f"Parsing failed: {e}")
+        print(f"Response snippet: {response[:200]}")
         return None
+
+
+def create_fallback_decomposition(original_prompt):
+    """
+    Создает резервную SAP декомпозицию когда LLM не может парсить
+    Используется как fallback для Zephyr и других моделей
+    """
+    try:
+        from sap_fallback import create_simple_sap_decomposition
+        fallback_result = create_simple_sap_decomposition(original_prompt)
+        print(f"  💡 Используется резервная декомпозиция (LLM не смог распарсить ответ)")
+        return fallback_result
+    except Exception as e:
+        print(f"  ⚠️  Fallback также не сработал: {e}")
+        # Просто возвращаем исходный промт
+        return {
+            "explanation": "Fallback: using original prompt as-is (LLM parsing failed)",
+            "prompts_list": [original_prompt],
+            "switch_prompts_steps": []
+        }
