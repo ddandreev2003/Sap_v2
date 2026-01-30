@@ -116,7 +116,7 @@ def generate_sap_image(name, num_steps=50, num_images=1, seed=30498):
     # Этап 2: Загрузка SAP pipeline
     print(f"\n📥 Загружаю SAP pipeline...")
     
-    SapFluxPipeline = None
+    SapFlux = None
     try:
         import sys
         # Добавляем текущую директорию в path
@@ -124,8 +124,7 @@ def generate_sap_image(name, num_steps=50, num_images=1, seed=30498):
         if current_dir not in sys.path:
             sys.path.insert(0, current_dir)
         
-        from SAP_pipeline_flux import SapFluxPipeline as SAP_Pipeline
-        SapFluxPipeline = SAP_Pipeline
+        from SAP_pipeline_flux import SapFlux
         print(f"✅ SAP pipeline загружена успешно")
         use_sap = True
         
@@ -148,15 +147,16 @@ def generate_sap_image(name, num_steps=50, num_images=1, seed=30498):
         print(f"  [{i+1}/{num_images}] Seed {current_seed}... ", end="", flush=True)
         
         try:
-            # Создаём генератор
-            generator = torch.Generator(device="cuda")
+            # Создаём генератор с правильным device
+            gen_device = "cuda" if torch.cuda.is_available() else "cpu"
+            generator = torch.Generator(device=gen_device)
             generator.manual_seed(current_seed)
             
             # Запускаем генерирование
-            if use_sap and SapFluxPipeline is not None:
+            if use_sap and SapFlux is not None:
                 # SAP режим
                 try:
-                    sap_pipeline = SapFluxPipeline.from_pretrained(
+                    sap_pipeline = SapFlux.from_pretrained(
                         "black-forest-labs/FLUX.1-dev",
                         torch_dtype=torch.bfloat16
                     )

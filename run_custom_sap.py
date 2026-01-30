@@ -117,7 +117,7 @@ def generate_with_custom_sap(
     print(f"  Seeds: {seeds}")
     
     # Импортируем необходимые модули
-    SapFluxPipeline = None
+    SapFlux = None
     try:
         import sys
         from pathlib import Path as PathLib
@@ -126,7 +126,7 @@ def generate_with_custom_sap(
         if current_dir not in sys.path:
             sys.path.insert(0, current_dir)
         
-        from SAP_pipeline_flux import SapFluxPipeline
+        from SAP_pipeline_flux import SapFlux
         print(f"✅ SAP Pipeline загружена успешно")
     except ImportError as import_err:
         print(f"⚠️  SAP Pipeline недоступна: {import_err}")
@@ -143,9 +143,9 @@ def generate_with_custom_sap(
         # Инициализируем pipeline
         pipeline = None
         try:
-            if SapFluxPipeline is not None:
+            if SapFlux is not None:
                 # Пытаемся загрузить SAP Pipeline
-                pipeline = SapFluxPipeline.from_pretrained(
+                pipeline = SapFlux.from_pretrained(
                     "black-forest-labs/FLUX.1-dev",
                     torch_dtype=torch.bfloat16,
                     device_map="auto"
@@ -153,7 +153,7 @@ def generate_with_custom_sap(
                 print(f"✅ SAP FLUX модель загружена успешно")
                 use_sap = True
             else:
-                raise Exception("SapFluxPipeline not available")
+                raise Exception("SapFlux not available")
                 
         except Exception as pipeline_err:
             print(f"⚠️  SAP Pipeline не смог загрузиться: {pipeline_err}")
@@ -181,8 +181,9 @@ def generate_with_custom_sap(
             print(f"\n  [{seed_idx}/{len(seeds)}] Генерирую с seed={seed}...")
             
             try:
-                # Создаём генератор
-                generator = torch.Generator(device=device)
+                # Создаём генератор с правильным device
+                gen_device = "cuda" if device == "cuda" and torch.cuda.is_available() else "cpu"
+                generator = torch.Generator(device=gen_device)
                 generator.manual_seed(seed)
                 
                 # Запускаем генерирование
