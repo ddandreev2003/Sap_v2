@@ -1,0 +1,181 @@
+{
+  "default_configuration": {
+    "generation_params": {
+      "height": 1024,
+      "width": 1024,
+      "num_inference_steps": 50,
+      "guidance_scale": 3.5
+    },
+    "default_seeds": [30498],
+    "default_llm": "GPT",
+    "default_mode": "both"
+  },
+  
+  "presets": {
+    "quick_test": {
+      "description": "Быстрое тестирование (3-5 минут)",
+      "num_inference_steps": 20,
+      "seeds": [30498],
+      "mode": "both",
+      "height": 768,
+      "width": 768
+    },
+    
+    "fast": {
+      "description": "Быстрая генерация (5-10 минут)",
+      "num_inference_steps": 30,
+      "seeds": [30498],
+      "mode": "both",
+      "height": 1024,
+      "width": 1024
+    },
+    
+    "balanced": {
+      "description": "Сбалансированное качество и время (10-20 минут)",
+      "num_inference_steps": 50,
+      "seeds": [30498, 40123],
+      "mode": "both",
+      "height": 1024,
+      "width": 1024
+    },
+    
+    "quality": {
+      "description": "Высокое качество (20-40 минут)",
+      "num_inference_steps": 60,
+      "seeds": [30498, 40123, 50456],
+      "mode": "both",
+      "height": 1024,
+      "width": 1024
+    },
+    
+    "direct_only": {
+      "description": "Только Direct FLUX (без SAP)",
+      "num_inference_steps": 50,
+      "seeds": [30498],
+      "mode": "direct",
+      "height": 1024,
+      "width": 1024
+    },
+    
+    "sap_only": {
+      "description": "Только SAP FLUX (с LLM декомпозицией)",
+      "num_inference_steps": 50,
+      "seeds": [30498],
+      "mode": "sap",
+      "height": 1024,
+      "width": 1024,
+      "llm": "GPT"
+    },
+    
+    "local_only": {
+      "description": "Только SAP с локальной моделью Zephyr (бесплатно)",
+      "num_inference_steps": 40,
+      "seeds": [30498],
+      "mode": "sap",
+      "height": 1024,
+      "width": 1024,
+      "llm": "Zephyr"
+    },
+    
+    "experimental": {
+      "description": "Экспериментальная конфигурация (высокое качество, долгое время)",
+      "num_inference_steps": 80,
+      "seeds": [12345, 67890, 11111, 22222],
+      "mode": "both",
+      "height": 1024,
+      "width": 1024,
+      "guidance_scale": 4.0
+    }
+  },
+  
+  "models": {
+    "flux": {
+      "name": "FLUX 1.dev",
+      "repo_id": "black-forest-labs/FLUX.1-dev",
+      "dtype": "bfloat16",
+      "memory_required_gb": 24,
+      "supported_sizes": ["1024x1024", "768x768", "512x512"]
+    },
+    
+    "zephyr": {
+      "name": "Zephyr 7B Beta",
+      "repo_id": "HuggingFaceH4/zephyr-7b-beta",
+      "dtype": "float16",
+      "memory_required_gb": 16,
+      "for_sap_decomposition": true
+    }
+  },
+  
+  "llm_providers": {
+    "gpt": {
+      "name": "GPT-4 Optimized",
+      "model": "gpt-4o",
+      "requires_api_key": true,
+      "api_key_env": "OPENAI_API_KEY",
+      "response_time_seconds": "2-10"
+    },
+    
+    "zephyr": {
+      "name": "Zephyr 7B Beta (Local)",
+      "model": "HuggingFaceH4/zephyr-7b-beta",
+      "requires_api_key": false,
+      "api_key_env": null,
+      "response_time_seconds": "30-120"
+    }
+  },
+  
+  "output_structure": {
+    "base_dir": "results_combined",
+    "batch_naming": "batch_YYYYMMDD_HHMMSS",
+    "subdirs": {
+      "direct_flux": "Результаты Direct FLUX",
+      "sap_flux": "Результаты SAP FLUX"
+    },
+    "files": {
+      "metadata.txt": "Параметры генерации и метаинформация",
+      "comparison_report.txt": "Отчет сравнения (создается отдельно)",
+      "gallery/comparison.html": "HTML галерея для визуального сравнения"
+    }
+  },
+  
+  "system_requirements": {
+    "minimum": {
+      "vram_gb": 16,
+      "ram_gb": 32,
+      "storage_gb": 50,
+      "python_version": "3.9+"
+    },
+    "recommended": {
+      "vram_gb": 24,
+      "ram_gb": 64,
+      "storage_gb": 100,
+      "python_version": "3.10+"
+    }
+  },
+  
+  "environment_variables": {
+    "OPENAI_API_KEY": {
+      "description": "API ключ OpenAI для GPT в SAP режиме",
+      "required_for": ["sap_mode_with_gpt"],
+      "example": "sk-..."
+    },
+    "HF_TOKEN": {
+      "description": "Hugging Face токен для приватного доступа к моделям",
+      "required_for": ["private_model_access"],
+      "example": "hf_..."
+    },
+    "CUDA_VISIBLE_DEVICES": {
+      "description": "Выбор GPU устройств для использования",
+      "required_for": ["multi_gpu_setup"],
+      "example": "0,1,2,3"
+    }
+  },
+  
+  "seed_recommendations": {
+    "reproducibility": [30498],
+    "variety_2": [30498, 40123],
+    "variety_3": [30498, 40123, 50456],
+    "variety_4": [30498, 40123, 50456, 60789],
+    "random_set": ["random", "random", "random"]
+  }
+}

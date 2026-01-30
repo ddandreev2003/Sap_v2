@@ -43,6 +43,55 @@ This will install all required packages listed in pyproject.toml and lock their 
 ```
 
 ## Usage
+
+### 🆕 NEW: Combined FLUX + SAP Pipeline (Recommended)
+
+For the easiest way to use both Direct FLUX and SAP generation methods, see the new combined pipeline:
+
+**📌 START HERE:** [00_START_HERE.md](00_START_HERE.md) - Complete guide to the new features
+
+#### Quick Start (3 steps):
+```bash
+# 1. Check environment
+python check_environment.py
+
+# 2. Quick test generation
+python quick_launch.py --preset compare
+
+# 3. View results
+# Check: results_combined/batch_YYYYMMDD_HHMMSS/
+```
+
+#### Available Commands:
+```bash
+# Quick comparison (Direct vs SAP)
+python quick_launch.py --preset compare
+
+# Only Direct FLUX (fast)
+python quick_launch.py --preset direct-fast
+
+# Only SAP with GPT
+export OPENAI_API_KEY="sk-..."
+python quick_launch.py --preset sap-quality
+
+# Local SAP with Zephyr (free, no API)
+python quick_launch.py --preset local-zephyr
+
+# Analyze results
+python compare_results.py --batch-dir results_combined/batch_*/batch_* --all
+```
+
+#### New Components:
+- ✅ `combined_flux_sap.py` - Main application (Direct + SAP generation)
+- ✅ `quick_launch.py` - Quick start with presets
+- ✅ `compare_results.py` - Analysis and comparison tool
+- ✅ `check_environment.py` - Environment checker
+- ✅ Documentation: 00_START_HERE.md, QUICKSTART.md, and more
+
+---
+
+### 🔧 Original SAP Pipeline Usage
+
 Once the environment is set up, you can generate images using the SAP pipeline by running:
 ```
 python run_SAP_flux.py --prompt "your prompt" --seeds_list seed1 seed2 seed3
