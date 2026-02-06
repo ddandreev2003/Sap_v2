@@ -90,7 +90,8 @@ def generate_with_custom_sap(
     height=1024,
     width=1024,
     seeds=None,
-    device="cuda"
+        device="cuda",
+        flux_version="1-dev"
 ):
     """
     Генерирует изображения с использованием готовой SAP декомпозиции
@@ -130,7 +131,8 @@ def generate_with_custom_sap(
         print(f"✅ SAP Pipeline загружена успешно")
     except ImportError as import_err:
         print(f"⚠️  SAP Pipeline недоступна: {import_err}")
-        print(f"   Будет использован Direct FLUX режим")
+            device="cuda",
+            flux_version="1-dev"
     
     try:
         # Загружаем модель FLUX
@@ -175,7 +177,7 @@ def generate_with_custom_sap(
                 return None
         
         # Генерируем изображения для каждого seed
-        results = []
+                print(f"\n📥 Загружаю FLUX модель (версия: {flux_version})...")
         
         for seed_idx, seed in enumerate(seeds, 1):
             print(f"\n  [{seed_idx}/{len(seeds)}] Генерирую с seed={seed}...")

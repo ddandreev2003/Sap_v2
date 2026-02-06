@@ -8,6 +8,7 @@
 """
 
 import torch
+import argparse
 from pathlib import Path
 from datetime import datetime
 
@@ -55,11 +56,17 @@ def generate_flux_direct(
     print(f"\n📥 Загружаю FLUX модель...")
     try:
         from diffusers import FluxPipeline
-        
         pipeline = FluxPipeline.from_pretrained(
-            "black-forest-labs/FLUX.1-dev",
-            torch_dtype=torch.bfloat16
-        )
+            parser = argparse.ArgumentParser()
+            parser.add_argument('--flux-version', type=str, default='1-dev', help='Версия FLUX: 1-dev или 2-dev')
+            # ...добавьте остальные аргументы, если нужно...
+            args = parser.parse_args()
+
+            model_repo = f"black-forest-labs/FLUX.{args.flux_version}"
+            pipeline = FluxPipeline.from_pretrained(
+                model_repo,
+                torch_dtype=torch.bfloat16
+            )
         pipeline = pipeline.to("cuda")
         # Оптимизируем для памяти
         pipeline.enable_attention_slicing()

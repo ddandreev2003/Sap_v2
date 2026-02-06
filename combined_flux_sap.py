@@ -332,6 +332,12 @@ def parse_arguments():
         default=None,
         help='Использовать предгенерированные SAP промты из JSON файла (например: SAP_prompts.json)'
     )
+        parser.add_argument(
+            '--flux-version',
+            type=str,
+            default='1-dev',
+            help='Версия FLUX: 1-dev или 2-dev (по умолчанию 1-dev)'
+        )
     
     return parser.parse_args()
 
