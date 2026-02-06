@@ -335,6 +335,12 @@ def main():
         help='GPU или CPU (default: cuda)'
     )
     
+    parser.add_argument(
+        '--flux-version',
+        type=str,
+        default='1-dev',
+        help='Версия FLUX: 1-dev или 2-dev (default: 1-dev)'
+    )
     args = parser.parse_args()
     
     # Показать список примеров
@@ -366,7 +372,6 @@ def main():
     # Генерирование
     if args.all:
         print(f"\n📋 Генерирую все {len(CUSTOM_SAP_DECOMPOSITIONS)} примеров...")
-        
         all_results = []
         for name, sap_data in CUSTOM_SAP_DECOMPOSITIONS.items():
             result = generate_with_custom_sap(
@@ -376,20 +381,17 @@ def main():
                 height=args.height,
                 width=args.width,
                 seeds=seeds,
-                device=args.device
+                device=args.device,
+                flux_version=args.flux_version
             )
-            
             if result:
                 all_results.append(result)
-        
         print(f"\n{'='*70}")
         print(f"✅ ГЕНЕРИРОВАНИЕ ЗАВЕРШЕНО!")
         print(f"{'='*70}")
         print(f"\nВсего примеров: {len(all_results)}")
         print(f"Всего изображений: {sum(r['num_images'] for r in all_results)}")
-        
         return 0
-    
     elif args.name:
         sap_data = CUSTOM_SAP_DECOMPOSITIONS[args.name]
         result = generate_with_custom_sap(
@@ -399,7 +401,8 @@ def main():
             height=args.height,
             width=args.width,
             seeds=seeds,
-            device=args.device
+            device=args.device,
+            flux_version=args.flux_version
         )
         
         if result:
