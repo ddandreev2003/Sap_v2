@@ -131,8 +131,6 @@ def generate_with_custom_sap(
         print(f"✅ SAP Pipeline загружена успешно")
     except ImportError as import_err:
         print(f"⚠️  SAP Pipeline недоступна: {import_err}")
-            device="cuda",
-            flux_version="1-dev"
     
     try:
         # Загружаем модель FLUX
